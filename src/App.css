@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/fonts/Geist Mono.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bitcount';
+  src: url('./assets/fonts/Bitcount.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+:root {
+  font-family: Geist, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #fff;
+  background-color: #161616;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+.logo-text {
+  font-family: Bitcount;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}

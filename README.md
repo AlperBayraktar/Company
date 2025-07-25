@@ -1,2 +1,3 @@
-# Company
-Company – a quiet presence for focused flow.
+![til](./readme-gif.gif)
+
+> Instructions coming soon.
