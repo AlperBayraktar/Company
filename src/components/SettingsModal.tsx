@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { MdClose } from "react-icons/md";
-import { useState, useEffect } from "react";
-import { useBackground } from "../contexts/BackgroundContext";
+import { IoIosWarning } from "react-icons/io";
+import { useState, useEffect, useRef } from "react";
 import PossibleBackgroundComponents from "./PossibleBackgroundComponents";
-import { PropInput } from "./PropInputs";
-import { BackgroundComponentConfig } from "../types/BackgroundTypes";
+import { useBackground } from "../contexts/BackgroundContext";
+
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,118 +12,175 @@ interface SettingsModalProps {
 }
 
 function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<"backgrounds" | "other">("backgrounds");
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
-  const [tempProps, setTempProps] = useState<Record<string, any>>({});
-  
-  const {
-    backgroundState,
-    setPreviewBackground,
-    clearPreview,
-    applyPreview,
-    getDefaultPropsForComponent
-  } = useBackground();
+  const { setCurrentBackground, setPreviewBackground, clearPreview } = useBackground();
 
+  const [activeSection, setActiveSection] = useState<"backgrounds" | "other">("backgrounds");
+  const [previewMode, setPreviewMode] = useState(false);
+  // Load initial background and props from localStorage if available
+  const getPersistedProps = (bgName: string, propsArr: any[]) => {
+    try {
+      const persisted = JSON.parse(localStorage.getItem('backgroundSettings') || '{}');
+      const persistedProps = persisted.backgroundProps?.[bgName] || {};
+      const obj: Record<string, any> = {};
+      propsArr.forEach((p: any) => {
+        obj[p.prop] = persistedProps[p.prop] !== undefined ? persistedProps[p.prop] : p.defaultValue;
+      });
+      return obj;
+    } catch {
+      const obj: Record<string, any> = {};
+      propsArr.forEach((p: any) => {
+        obj[p.prop] = p.defaultValue;
+      });
+      return obj;
+    }
+  };
+  // Selected background index and props
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [backgroundProps, setBackgroundProps] = useState<Record<string, any>>({});
+  const propsBackupRef = useRef<any>(null);
+
+  // On modal open, set selectedIdx and props to active background from storage
   useEffect(() => {
     if (isOpen) {
-      setSelectedComponent(backgroundState.current.name);
-      setTempProps(backgroundState.current.props);
+      try {
+        const persisted = JSON.parse(localStorage.getItem('backgroundSettings') || '{}');
+        const idx = PossibleBackgroundComponents.findIndex(
+          (bg: any) => bg.component.name === persisted.activeBackground
+        );
+        const finalIdx = idx >= 0 ? idx : 0;
+        setSelectedIdx(finalIdx);
+        const props = getPersistedProps(PossibleBackgroundComponents[finalIdx].component.name, PossibleBackgroundComponents[finalIdx].props);
+        setBackgroundProps(props);
+        propsBackupRef.current = props;
+      } catch {
+        setSelectedIdx(0);
+        const props = getPersistedProps(PossibleBackgroundComponents[0].component.name, PossibleBackgroundComponents[0].props);
+        setBackgroundProps(props);
+        propsBackupRef.current = props;
+      }
     }
+    // eslint-disable-next-line
   }, [isOpen]);
 
-  const handleSelectComponent = (componentName: string) => {
-    setSelectedComponent(componentName);
-    const defaultProps = getDefaultPropsForComponent(componentName);
-    setTempProps(defaultProps);
+  // For preview modal reopen
+  const [isModalVisible, setIsModalVisible] = useState(true);
+  const mouseMoveListener = useRef<any>(null);
+
+  const handlePreview = (idx: number) => {
+    // Backup current props before preview
+    propsBackupRef.current = { ...backgroundProps };
+    setSelectedIdx(idx);
+    setPreviewBackground(
+      PossibleBackgroundComponents[idx].component.name,
+      { ...backgroundProps }
+    );
+    setPreviewMode(true);
+    setIsModalVisible(false); // Hide modal
   };
 
-  const handlePropChange = (propName: string, value: any) => {
-    setTempProps(prev => ({
-      ...prev,
-      [propName]: value
-    }));
-  };
-
-  const handlePreview = () => {
-    if (selectedComponent) {
-      setPreviewBackground(selectedComponent, tempProps);
+  // When previewMode is active and modal is hidden, listen for mousemove to cancel preview and reopen modal
+  useEffect(() => {
+    if (previewMode && !isModalVisible) {
+      mouseMoveListener.current = () => {
+        clearPreview();
+        setPreviewMode(false);
+        setIsModalVisible(true);
+        // Restore unsaved changes after preview ends
+        if (propsBackupRef.current) {
+          setBackgroundProps(propsBackupRef.current);
+        }
+        window.removeEventListener("mousemove", mouseMoveListener.current);
+      };
+      window.addEventListener("mousemove", mouseMoveListener.current);
+      return () => window.removeEventListener("mousemove", mouseMoveListener.current);
     }
-  };
+    // eslint-disable-next-line
+  }, [previewMode, isModalVisible]);
 
-  const handleApply = () => {
-    applyPreview();
-    setSelectedComponent(null);
-    setTempProps({});
-  };
-
-  const handleCancel = () => {
-    clearPreview();
-    setSelectedComponent(null);
-    setTempProps({});
-  };
-
-  const handleClose = () => {
-    handleCancel();
+  const handleApplyBackground = (idx: number) => {
+    setSelectedIdx(idx);
+    setCurrentBackground(
+      PossibleBackgroundComponents[idx].component.name,
+      { ...backgroundProps }
+    );
+    // Save to localStorage
+    try {
+      const bgName = PossibleBackgroundComponents[idx].component.name;
+      const persisted = JSON.parse(localStorage.getItem('backgroundSettings') || '{}');
+      localStorage.setItem(
+        'backgroundSettings',
+        JSON.stringify({
+          ...persisted,
+          activeBackground: bgName,
+          backgroundProps: {
+            ...(persisted.backgroundProps || {}),
+            [bgName]: {
+              ...(persisted.backgroundProps?.[bgName] || {}),
+              ...backgroundProps
+            }
+          }
+        })
+      );
+    } catch {}
+    setPreviewMode(false);
     onClose();
   };
 
-  const getSelectedComponentConfig = (): BackgroundComponentConfig | null => {
-    if (!selectedComponent) return null;
-    return PossibleBackgroundComponents.find(
-      (comp: any) => comp.component.name === selectedComponent
-    ) || null;
+  const handlePropChange = (prop: string, value: any) => {
+    setBackgroundProps((prev) => {
+      const updated = { ...prev, [prop]: value };
+      propsBackupRef.current = updated; // Always keep backup in sync with UI
+      return updated;
+    });
   };
 
-  const selectedConfig = getSelectedComponentConfig();
-
+  // Modal dark theme and layout
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && isModalVisible && (
         <>
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-200"
+            className="fixed inset-0 bg-black bg-opacity-70 z-40"
             onClick={onClose}
           />
-          
+
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-250 flex items-center justify-center p-4"
+            exit={{ opacity: 0, scale: 0.96 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex overflow-hidden">
+            <div className="bg-[#181C22] text-gray-100 rounded-2xl shadow-2xl w-full max-w-5xl h-[68vh] flex overflow-hidden border border-gray-800">
               {/* Sidebar */}
-              <div className="w-64 bg-gray-100 border-r border-gray-200">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Settings</h2>
+              <div className="w-64 bg-[#23272F] border-r border-gray-800">
+                <div className="p-4 border-b border-gray-800">
+                  <h2 className="text-lg font-semibold text-gray-100">Ayarlar</h2>
                 </div>
-                
                 <nav className="p-2">
                   <button
                     onClick={() => setActiveSection("backgrounds")}
                     className={`w-full text-left px-3 py-2 rounded-md mb-1 transition-colors ${
                       activeSection === "backgrounds"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-700 hover:bg-gray-200"
+                        ? "bg-blue-900/60 text-blue-400"
+                        : "text-gray-300 hover:bg-[#23272F]/70"
                     }`}
                   >
-                    Backgrounds
+                    Arka Planlar
                   </button>
-                  
                   <button
                     onClick={() => setActiveSection("other")}
                     className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
                       activeSection === "other"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-700 hover:bg-gray-200"
+                        ? "bg-blue-900/60 text-blue-400"
+                        : "text-gray-300 hover:bg-[#23272F]/70"
                     }`}
                   >
-                    Other
+                    Diğer
                   </button>
                 </nav>
               </div>
@@ -131,127 +188,184 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               {/* Main Content */}
               <div className="flex-1 flex flex-col">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-800 capitalize">
-                    {activeSection}
+                <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-100 capitalize">
+                    {activeSection === "backgrounds" ? "Arka Planlar" : "Diğer"}
                   </h3>
                   <button
-                    onClick={handleClose}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    onClick={onClose}
+                    className="p-2 hover:bg-gray-800 rounded-full transition-colors"
                   >
-                    <MdClose size={24} className="text-gray-600" />
+                    <MdClose size={24} className="text-gray-300" />
                   </button>
                 </div>
 
                 {/* Content Area */}
                 <div className="flex-1 p-6 overflow-y-auto">
                   {activeSection === "backgrounds" && (
-                    <div className="flex gap-6 h-full">
-                      {/* Component List */}
-                      <div className="w-1/3">
-                        <h4 className="text-lg font-medium text-gray-800 mb-4">
-                          Background Components
-                        </h4>
-                        <div className="space-y-2">
-                          {PossibleBackgroundComponents.map((comp: any, index: number) => (
-                            <div
-                              key={index}
-                              className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                                selectedComponent === comp.component.name
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}
-                              onClick={() => handleSelectComponent(comp.component.name)}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">
-                                  {comp.gifUrl ? (
-                                    <img src={comp.gifUrl} alt={comp.text} className="w-full h-full object-cover rounded" />
-                                  ) : (
-                                    'GIF'
-                                  )}
-                                </div>
-                                <div>
-                                  <h5 className="font-medium text-gray-800">{comp.text}</h5>
-                                  <p className="text-xs text-gray-500">
-                                    {comp.props.length} properties
-                                  </p>
-                                </div>
-                              </div>
+                    <div>
+                      <div className="mb-4 text-sm text-yellow-400 bg-yellow-900/40 border border-yellow-700 rounded-[4px] px-3 py-2 flex items-center gap-2">
+                        <IoIosWarning size={36} className="text-yellow-400" />
+                        Animasyonlu arka planlar bilgisayarınızın GPU gücünü aşırı kullanabilir ve performans sorunlarına yol açabilir. Problem yaşarsanız arka planların -varsa- animasyonlarını kapatmayı veya düz renk arka plan kullanmayı deneyebilirsiniz.
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+                        {PossibleBackgroundComponents.map((bg: any, idx: number) => (
+                          <div
+                            key={bg.text}
+                            className={`border rounded-xl p-4 transition-shadow relative ${idx === selectedIdx ? "border-blue-500 shadow-lg" : "border-gray-800 hover:shadow-md"}`}
+                            onClick={() => {
+                              if (selectedIdx !== idx) {
+                                setSelectedIdx(idx);
+                                const props = getPersistedProps(bg.component.name, bg.props);
+                                setBackgroundProps(props);
+                                propsBackupRef.current = props;
+                              }
+                            }}
+                          >
+                            <div className="aspect-video bg-[#23272F] rounded-lg mb-3 flex items-center justify-center border border-gray-800">
+                              {/* GIF preview or solid color preview */}
+                              {bg.gifUrl ? (
+                                <img src={bg.gifUrl} alt={bg.text} className="rounded max-h-24 mx-auto" />
+                              ) : bg.props?.find((p: any) => p.type === "color") && idx === 0 ? (
+                                <div className="w-16 h-8 rounded-lg border border-gray-700" style={{ backgroundColor: backgroundProps["color"] }} />
+                              ) : (
+                                <span className="text-gray-600">Önizleme</span>
+                              )}
+                            </div>
+                            <h5 className="font-medium text-gray-100 mb-2">{bg.text}</h5>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handlePreview(idx)}
+                                className="flex-1 px-3 py-1 text-sm bg-blue-700 text-white rounded hover:bg-blue-800 transition-colors"
+                              >
+                                Önizle
+                              </button>
+                              <button
+                                onClick={() => handleApplyBackground(idx)}
+                                className="flex-1 px-3 py-1 text-sm bg-green-700 text-white rounded hover:bg-green-800 transition-colors"
+                              >
+                                Uygula
+                              </button>
+                            </div>
+                            {idx === 0 && (
+                              <div className="absolute top-2 right-2 bg-blue-600 text-xs px-2 py-0.5 rounded text-white">Varsayılan</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Prop Controls for Selected Background */}
+                      <div className="mt-8">
+                        <h6 className="mb-2 text-gray-300 font-semibold">Ayarlar</h6>
+                        <div className="space-y-3">
+                          {PossibleBackgroundComponents[selectedIdx]?.props?.map((prop: any, pi: number) => (
+                            <div key={prop.prop} className="flex items-center gap-3">
+                              <label className="text-gray-200 whitespace-nowrap" style={{width: 'fit-content', minWidth: 0, fontFamily: 'monospace'}}>{prop.prop}</label>
+                              {prop.type === "color" ? (
+                                <>
+                                  <input
+                                    type="color"
+                                    value={backgroundProps[prop.prop]}
+                                    onChange={e => handlePropChange(prop.prop, e.target.value)}
+                                    className="w-8 h-8 p-0 border-0 bg-transparent"
+                                  />
+                                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded">{backgroundProps[prop.prop]}</span>
+                                </>
+                              ) : prop.type === "number" ? (
+                                <>
+                                  <input
+                                    type="range"
+                                    min={prop.min}
+                                    max={prop.max}
+                                    step={0.01}
+                                    value={backgroundProps[prop.prop]}
+                                    onChange={e => handlePropChange(prop.prop, Number(e.target.value))}
+                                    className="w-40 accent-blue-500"
+                                  />
+                                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded">{backgroundProps[prop.prop]}</span>
+                                </>
+                              ) : prop.type === "boolean" ? (
+                                <>
+                                  <input
+                                    type="checkbox"
+                                    checked={backgroundProps[prop.prop]}
+                                    onChange={e => handlePropChange(prop.prop, e.target.checked)}
+                                    className="accent-blue-500"
+                                  />
+                                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded">{backgroundProps[prop.prop] ? "Açık" : "Kapalı"}</span>
+                                </>
+                              ) : null}
                             </div>
                           ))}
+
+                          {/* Sıfırla Button */}
+                          <button
+                            className="mt-2 px-4 py-1 bg-gray-700 hover:bg-gray-600 text-xs rounded text-white border border-gray-600 transition-colors"
+                            onClick={() => {
+                              const defaults: Record<string, any> = {};
+                              PossibleBackgroundComponents[selectedIdx]?.props?.forEach((p: any) => {
+                                defaults[p.prop] = p.defaultValue;
+                              });
+                              setBackgroundProps(defaults);
+                            }}
+                          >
+                            Sıfırla
+                          </button>
+
+                          {/* SolidColorBackground için önerilen renkler */}
+                          {PossibleBackgroundComponents[selectedIdx]?.component?.name === "SolidColorBackground" && (
+                            <div className="mt-4">
+                              <div className="mb-1 text-xs text-gray-400">Tavsiye Edilen Renkler:</div>
+                              <div className="flex gap-2">
+                                {["#4C0719","#052F2E","#0C4A70","#1c2e4a"].map(color => (
+                                  <button
+                                    key={color}
+                                    type="button"
+                                    className="w-7 h-7 rounded border-2 border-gray-600 hover:border-blue-500 transition-all"
+                                    style={{ backgroundColor: color }}
+                                    onClick={() => handlePropChange("color", color)}
+                                  >
+                                    {backgroundProps["color"] === color && (
+                                      <span className="block w-full h-full rounded ring-2 ring-blue-400"></span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                         </div>
                       </div>
 
-                      {/* Properties Panel */}
-                      <div className="flex-1">
-                        {selectedComponent ? (
-                          <div>
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-lg font-medium text-gray-800">
-                                {selectedConfig?.text} Settings
-                              </h4>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={handleCancel}
-                                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={handlePreview}
-                                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                                >
-                                  Preview
-                                </button>
-                                {backgroundState.isPreviewMode && (
-                                  <button
-                                    onClick={handleApply}
-                                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                                  >
-                                    Apply
-                                  </button>
-                                )}
-                              </div>
-                            </div>
+                      {/* Preview Mode Indicator */}
+                      {previewMode && (
+                        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg z-[999]">
+                          <span className="mr-2">🔍 Önizleme Modu Aktif</span>
+                          <button
+                            onClick={() => setPreviewMode(false)}
+                            className="underline hover:no-underline"
+                          >
+                            Çıkış
+                          </button>
+                        </div>
+                      )}
                             
-                            <div className="space-y-4">
-                              {selectedConfig?.props.map((prop, index) => (
-                                <PropInput
-                                  key={index}
-                                  prop={prop}
-                                  value={tempProps[prop.prop]}
-                                  onChange={(value) => handlePropChange(prop.prop, value)}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <div className="text-center">
-                              <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-lg flex items-center justify-center">
-                                <span className="text-2xl">🎨</span>
-                              </div>
-                              <p className="text-gray-500">Select a background component to customize its settings</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+
                     </div>
                   )}
 
                   {activeSection === "other" && (
                     <div>
-                      <h4 className="text-lg font-medium text-gray-800 mb-4">
-                        Other Settings
+                      <h4 className="text-lg font-medium text-gray-100 mb-4">
+                        Diğer Ayarlar
                       </h4>
                       <div className="text-center py-12">
                         <div className="text-gray-400 mb-2">
-                          <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-lg flex items-center justify-center">
                             <span className="text-2xl">⚙️</span>
                           </div>
                         </div>
-                        <p className="text-gray-500">Other settings will be added here.</p>
+                        <p className="text-gray-400">Diğer ayarlar buraya eklenecek.</p>
                       </div>
                     </div>
                   )}

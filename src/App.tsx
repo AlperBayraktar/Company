@@ -10,7 +10,7 @@ import { BackgroundProvider } from "./contexts/BackgroundContext";
 import BackgroundRenderer from "./components/BackgroundRenderer";
 
 function App() {
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   return (
     <BackgroundProvider>

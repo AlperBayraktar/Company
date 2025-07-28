@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BackgroundState } from '../types/BackgroundTypes';
 import PossibleBackgroundComponents from '../components/PossibleBackgroundComponents';
+import { loadBackgroundSettings, saveBackgroundSettings } from '../utils/backgroundPersistence';
 
 interface BackgroundContextType {
   backgroundState: BackgroundState;
@@ -40,19 +41,44 @@ export const BackgroundProvider: React.FC<BackgroundProviderProps> = ({ children
     return defaultProps;
   };
 
-  const [backgroundState, setBackgroundState] = useState<BackgroundState>({
-    current: {
-      name: 'DarkVeil',
-      props: getDefaultPropsForComponent('DarkVeil')
-    },
-    isPreviewMode: false
+  const [backgroundState, setBackgroundState] = useState<BackgroundState>(() => {
+    // Try to load from persistence
+    const loaded = loadBackgroundSettings();
+    if (loaded && loaded.activeBackground) {
+      return {
+        current: {
+          name: loaded.activeBackground,
+          props: loaded.backgroundProps?.[loaded.activeBackground] || getDefaultPropsForComponent(loaded.activeBackground)
+        },
+        isPreviewMode: false
+      };
+    }
+    // fallback
+    return {
+      current: {
+        name: 'DarkVeil',
+        props: getDefaultPropsForComponent('DarkVeil')
+      },
+      isPreviewMode: false
+    };
   });
 
   const setCurrentBackground = (name: string, props: Record<string, any>) => {
-    setBackgroundState(prev => ({
-      ...prev,
-      current: { name, props }
-    }));
+    setBackgroundState(prev => {
+      const newState = {
+        ...prev,
+        current: { name, props }
+      };
+      // Save to persistence
+      saveBackgroundSettings({
+        activeBackground: name,
+        backgroundProps: {
+          ...(loadBackgroundSettings()?.backgroundProps || {}),
+          [name]: props
+        }
+      });
+      return newState;
+    });
   };
 
   const setPreviewBackground = (name: string, props: Record<string, any>) => {
@@ -72,12 +98,24 @@ export const BackgroundProvider: React.FC<BackgroundProviderProps> = ({ children
   };
 
   const applyPreview = () => {
-    setBackgroundState(prev => ({
-      ...prev,
-      current: prev.preview || prev.current,
-      preview: undefined,
-      isPreviewMode: false
-    }));
+    setBackgroundState(prev => {
+      const next = {
+        ...prev,
+        current: prev.preview || prev.current,
+        preview: undefined,
+        isPreviewMode: false
+      };
+      if (next.current) {
+        saveBackgroundSettings({
+          activeBackground: next.current.name,
+          backgroundProps: {
+            ...(loadBackgroundSettings()?.backgroundProps || {}),
+            [next.current.name]: next.current.props
+          }
+        });
+      }
+      return next;
+    });
   };
 
   return (

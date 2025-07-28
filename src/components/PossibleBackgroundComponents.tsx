@@ -1,7 +1,21 @@
 import DarkVeil from "./backgrounds/DarkVeil";
 import RippleGrid from "./backgrounds/RippleGrid";
+import SolidColorBackground from "./backgrounds/SolidColorBackground";
 
 const PossibleBackgroundComponents:any = [
+    {
+        component: SolidColorBackground,
+        text: "Düz Renk (Solid Color)",
+        gifUrl: "",
+        default: true,
+        props: [
+            {
+                prop: "color",
+                type: "color",
+                defaultValue: "#1c2e4a"
+            }
+        ]
+    },
     {
         "component": DarkVeil,
         "text": "Dark Veil",
@@ -143,13 +157,7 @@ const PossibleBackgroundComponents:any = [
             "type": "boolean",
             "defaultValue": true
          },
-                  {
-            "prop": "mouseInteractionRadius",
-            "type": "number",
-            "min": 0.2,
-            "max": 2,
-            "defaultValue": 0.8
-         },
+
                   {
             "prop": "enableRainbow",
             "type": "boolean",

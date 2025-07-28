@@ -7,6 +7,7 @@ import {
 } from "react-icons/io5";
 import Button from "../liquid-glass/Button";
 import { useState } from "react";
+import { cn } from "../cn";
 
 const Pomodoro = () => {
   const [initTimeMin, setInitTimeMin] = useState(25);
@@ -71,7 +72,8 @@ const Pomodoro = () => {
           <div className="flex justify-center items-center gap-6">
             <Button
               rounded
-              className="p-1 bg-gradient-to-br from-pink-500/15 to-orange-500/15 border border-pink-300/25"
+              className={cn("p-1 bg-gradient-to-br border", 
+initTimeMin == 1 ? "from-gray-500/15 to-zinc-500/15 border-gray-300/25 hover:cursor-not-allowed" : "from-pink-500/15 to-orange-500/15 border-pink-300/25")}
               disabled={initTimeMin == 1}
               onClick={() => setInitTimeMin(initTimeMin - 1)}
             >
@@ -86,11 +88,14 @@ const Pomodoro = () => {
 
             <Button
               rounded
-              className="p-1 bg-gradient-to-br from-green-500/15 to-emerald-500/15 border border-green-300/25"
-              disabled={initTimeMin == 59}
+              className={cn("p-1 bg-gradient-to-br border", 
+initTimeMin == 60 ? "from-gray-500/15 to-zinc-500/15 border-gray-300/25 hover:cursor-not-allowed" : "from-green-500/15 to-emerald-500/15 border-green-300/25"
+
+              )}
+              disabled={initTimeMin == 60}
               onClick={() => setInitTimeMin(initTimeMin + 1)}
             >
-              <IoAddSharp className="text-2xl" />
+              <IoAddSharp className={cn("text-2xl", initTimeMin == 60 ? "text-gray-300" : "text-white")} />
             </Button>
           </div>
           <p className="text-lg text-center p-0 m-0 font-sans font-thin italic text-gray-300">

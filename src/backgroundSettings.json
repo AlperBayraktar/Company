@@ -1,0 +1,10 @@
+{
+  "activeBackground": "SolidColorBackground",
+  "backgroundProps": {
+    "SolidColorBackground": {
+      "color": "#1c2e4a"
+    },
+    "DarkVeil": {},
+    "RippleGrid": {}
+  }
+}
