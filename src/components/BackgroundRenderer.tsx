@@ -22,7 +22,7 @@ const BackgroundRenderer: React.FC = () => {
   const BackgroundComponent = componentConfig.component;
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'absolute', zIndex: -1 }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'absolute', zIndex: -1 }}>
       <BackgroundComponent {...activeBackground.props} />
     </div>
   );

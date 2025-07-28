@@ -43,7 +43,7 @@ const RightTopContainer = () => {
 
   return (
     <Container 
-    className="w-100 fixed top-4 right-4 z-200 content-center px-12 py-8"
+    className="w-100 fixed top-4 right-4 z-100 content-center px-12 py-8"
     >
       <Carousel setApi={setApi}>
         <CarouselContent >
