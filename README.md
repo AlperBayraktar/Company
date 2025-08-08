@@ -61,5 +61,6 @@ Check out the [docs](https://v2.tauri.app/distribute/).
 - A quit button
 
 # Some screenshots
-
-> Coming soon.
+<img width="1919" height="1079" alt="company 2" src="https://github.com/user-attachments/assets/d05efe5f-e516-40a0-bbbd-dd38dcb281a2" />
+<img width="1919" height="1079" alt="company 1" src="https://github.com/user-attachments/assets/7660a88e-90cd-4836-a3e7-b94adc8eb8cd" />
+<img width="1919" height="1079" alt="company" src="https://github.com/user-attachments/assets/d27b768d-6680-4403-bcd2-c4b7c2dc44e7" />
