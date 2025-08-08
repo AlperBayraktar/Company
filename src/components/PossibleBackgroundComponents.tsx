@@ -40,7 +40,7 @@ const PossibleBackgroundComponents:any = [
             "type": "number",
             "min": 0,
             "max": 1,
-            "defaultValue": 0.5
+            "defaultValue": 0
          },
                   {
             "prop": "speed",

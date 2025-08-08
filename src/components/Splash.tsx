@@ -12,15 +12,28 @@ const Splash = ({ onFinish }: SplashProps) => {
     const [isVisible, setIsVisible] = useState(true);
     const lottieRef = useRef<LottieRefCurrentProps>(null);
 
+    useEffect( () => {
+      console.log("starting playing")
+      lottieRef.current?.play()
+    }, [])
+
     useEffect(() => {
-        // Lottie'nin süresi kadar bekle, sonra bitir
         if (lottieRef.current) {
           const durationSeconds:any = lottieRef.current.getDuration(false);
           console.log(durationSeconds)
 
           const timeout = setTimeout(() => {
-            console.log("fading out")
             setIsVisible(false);
+
+            const audioCtx = new AudioContext();
+            const audio = new Audio('/sounds/startup.mp3');
+            const track = audioCtx.createMediaElementSource(audio);
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 5;
+
+            track.connect(gainNode).connect(audioCtx.destination);
+
+            audio.play();
           }, (durationSeconds - fadeDurationSeconds) * 1000);
 
         console.log("timeout set")
@@ -37,7 +50,7 @@ const Splash = ({ onFinish }: SplashProps) => {
           
           transition={{ duration: fadeDurationSeconds }}
         >
-<Lottie lottieRef={lottieRef} animationData={initAnimation} onComplete={onFinish}  autoplay={true} loop={false} />
+<Lottie lottieRef={lottieRef} animationData={initAnimation} onComplete={onFinish}  autoplay={false} loop={false} />
         </motion.div>
   );
 };

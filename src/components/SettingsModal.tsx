@@ -194,7 +194,7 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </h3>
                   <button
                     onClick={onClose}
-                    className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+                    className="p-2 hover:bg-gray-800 rounded-full transition-colors hover:cursor-pointer"
                   >
                     <MdClose size={24} className="text-gray-300" />
                   </button>
@@ -229,20 +229,20 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               ) : bg.props?.find((p: any) => p.type === "color") && idx === 0 ? (
                                 <div className="w-16 h-8 rounded-lg border border-gray-700" style={{ backgroundColor: backgroundProps["color"] }} />
                               ) : (
-                                <span className="text-gray-600">Önizleme</span>
+                                <span className="text-gray-600">Ön izleme</span>
                               )}
                             </div>
                             <h5 className="font-medium text-gray-100 mb-2">{bg.text}</h5>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handlePreview(idx)}
-                                className="flex-1 px-3 py-1 text-sm bg-blue-700 text-white rounded hover:bg-blue-800 transition-colors"
+                                className="flex-1 px-3 py-1 text-sm bg-blue-700 text-white rounded hover:bg-blue-800 transition-colors hover:cursor-pointer"
                               >
-                                Önizle
+                                Ön izle
                               </button>
                               <button
                                 onClick={() => handleApplyBackground(idx)}
-                                className="flex-1 px-3 py-1 text-sm bg-green-700 text-white rounded hover:bg-green-800 transition-colors"
+                                className="flex-1 px-3 py-1 text-sm bg-green-700 text-white rounded hover:bg-green-800 transition-colors hover:cursor-pointer"
                               >
                                 Uygula
                               </button>
@@ -340,7 +340,7 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       {/* Preview Mode Indicator */}
                       {previewMode && (
                         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg z-[999]">
-                          <span className="mr-2">🔍 Önizleme Modu Aktif</span>
+                          <span className="mr-2">🔍 Ön izleme Modu Aktif</span>
                           <button
                             onClick={() => setPreviewMode(false)}
                             className="underline hover:no-underline"
