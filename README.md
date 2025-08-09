@@ -30,7 +30,7 @@ You can use it when you:
 
 ### Using the installer
 
-On Windows, you can install Company via the installer in the releases page.
+On Windows, you can install Company via the installers in the [releases](https://github.com/AlperBayraktar/Company/releases/) page.
 
 ### Cloning the repo
 
