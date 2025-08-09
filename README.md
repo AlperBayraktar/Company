@@ -59,6 +59,7 @@ Check out the [docs](https://v2.tauri.app/distribute/).
 - More background components (possibly from [React Bits](https://reactbits.dev/) and [Aceternity UI](https://ui.aceternity.com/))
 - GPU usage indicator
 - A quit button
+- Custom background feature (could be an image or even a React component!)
 
 # Some screenshots
 <img width="1919" height="1079" alt="company 2" src="https://github.com/user-attachments/assets/d05efe5f-e516-40a0-bbbd-dd38dcb281a2" />
